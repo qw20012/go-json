@@ -12,7 +12,7 @@
 
 ### json.UnmarshalFile
 
-Parse json string from given file. This can be used to process configuraton file.
+Unmarshal json string from given file. This can be used to process configuraton file.
 ```
 	config, err := UnmarshalFile[map[string]any]("config.json")
 	if err != nil {
