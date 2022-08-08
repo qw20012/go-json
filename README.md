@@ -1,23 +1,43 @@
 # go-json
 
-- Json for Humans. It very suitable for the config json file.
+- Json for Humans. It is very suitable for the config json file.
 	+ Single and multi-line comments are allowed.
 	+ Trailing comma is allowed.
 	+ Quotes can be ignored when string contains no space.
-	+ Outter brace can be ignored.
+	+ Outer brace can be ignored.
 - Helpful wrapper for navigating hierarchies of map[string]any objects.
 - Encoding and decoding of JSON like Package json.
 
 ## Usage
 
-### basic.IsNil
+### json.ParseFile
 
-Identify whether the any type is nil.
+Parse json string from given file. This can be used to process configuraton file.
 ```
-	var emptyArray [1]int
-	if basic.IsNil(emptyArray) {
-		t.Fatalf("GetOrCreate with emtpy slice failed")
+	config, err := ParseFile[map[string]any]("config.json")
+	if err != nil {
+		t.Fatalf("TestParseFile failed")
 	}
+
+	if config["key"].(string) != "value" {
+		t.Fatalf("TestParseFile failed Type=false, Got=true")
+	}
+```
+The content in file config.json as below.
+```
+	// '{' Outer barch can be ignored.
+	name:value, 
+
+	"key":"value",
+    
+	number: 123.5,
+
+	/* 
+	  Block comments
+	  Trailing comma is allowed.
+	*/
+	"another one" : true,
+	// '}' Outer barch can be ignored.
 ```
 ### basic.NewIfEmpty
 
