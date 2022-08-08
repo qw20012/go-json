@@ -1,10 +1,10 @@
 # go-json
 
 - Json for Humans. It very suitable for the config json file.
--- Single and multi-line comments are allowed.
--- Trailing comma is allowed.
--- Quotes can be ignored when string contains no space.
--- Outter brace can be ignored.
+	-- Single and multi-line comments are allowed.
+	-- Trailing comma is allowed.
+	-- Quotes can be ignored when string contains no space.
+	-- Outter brace can be ignored.
 - Helpful wrapper for navigating hierarchies of map[string]any objects.
 - Encoding and decoding of JSON like Package json.
 
