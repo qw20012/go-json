@@ -1,6 +1,6 @@
 # go-json
 
-- Json for Humans. It is very suitable for the config json file.
+- Json for humans. It is very suitable for the config json file.
 	+ Single and multi-line comments are allowed.
 	+ Trailing comma is allowed.
 	+ Quotes can be ignored when string contains no space.
@@ -25,7 +25,9 @@ Parse json string from given file. This can be used to process configuraton file
 ```
 The content in file config.json as below.
 ```
-	// '{' Outer barch can be ignored.
+	// '{' Outer barce can be ignored.
+	
+	// Quotes can be ignored when string contains no space.
 	name:value, 
 
 	"key":"value",
@@ -37,7 +39,7 @@ The content in file config.json as below.
 	  Trailing comma is allowed.
 	*/
 	"another one" : true,
-	// '}' Outer barch can be ignored.
+	// '}' Outer barce can be ignored.
 ```
 ### basic.NewIfEmpty
 
