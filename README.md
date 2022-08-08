@@ -10,17 +10,17 @@
 
 ## Usage
 
-### json.ParseFile
+### json.UnmarshalFile
 
 Parse json string from given file. This can be used to process configuraton file.
 ```
-	config, err := ParseFile[map[string]any]("config.json")
+	config, err := UnmarshalFile[map[string]any]("config.json")
 	if err != nil {
-		t.Fatalf("TestParseFile failed")
+		t.Fatalf("UnmarshalFile failed")
 	}
 
 	if config["key"].(string) != "value" {
-		t.Fatalf("TestParseFile failed Type=false, Got=true")
+		t.Fatalf("UnmarshalFile failed Type=false, Got=true")
 	}
 ```
 The content in file config.json as below.
