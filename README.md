@@ -1,7 +1,12 @@
-# go-basic
+# go-json
 
-- Package basic provides some utility functions.
-- Package str provides some utilities to manipulate string.
+- Json for Humans. It very suitable for the config json file.
+-- Single and multi-line comments are allowed.
+-- Trailing comma is allowed.
+-- Quotes can be ignored when string contains no space.
+-- Outter brace can be ignored.
+- Helpful wrapper for navigating hierarchies of map[string]any objects.
+- Encoding and decoding of JSON like Package json.
 
 ## Usage
 
