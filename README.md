@@ -5,8 +5,8 @@
 	+ Trailing comma is allowed.
 	+ Quotes can be ignored when string contains no space.
 	+ Outer brace can be ignored.
-- Helpful wrapper for navigating hierarchies of map[string]any objects.
 - Encoding and decoding of JSON like Package json.
+- Helpful wrapper for navigating hierarchies of map[string]any objects.
 
 ## Usage
 
@@ -41,28 +41,128 @@ The content in file config.json as below.
 	"another one" : true,
 	// '}' Outer barce can be ignored.
 ```
-### basic.NewIfEmpty
+### json.Unmarshal
 
-Make sure any type is created. Create by reflect if it is not there.
+Unmarshal json string into given generic type (T).
 ```
-	var emptyAnyMap map[string]any
-	fromEmptyAnyMap := basic.NewIfEmpty(emptyAnyMap)
-	if fromEmptyAnyMap == nil {
-		t.Fatalf("GetOrCreate with emtpy map failed")
+	type Book struct {
+		Name  *string
+		Pages *int
+		Arr   *[]string
 	}
-	fromEmptyAnyMap["key"] = 1
-```
-### str.Empty
+	
+	type Library struct {
+		Ptr     *[]*int
+		Book    Book //Books string
+		BookPtr *Book
+		Books   []Book
+		Count   int
+		IsNew   bool
+		Price   float32
+	}
+	
+	jsonStr := `
+	    // Comments
+		Ptr:[1,2,3],Book:{Name:"red", Pages:100, Arr:["1","2","a"]},BookPtr:{Name:"red", Pages:100, Arr:["1","2","a"]},Books:[{Name:"red", Pages:100, Arr:["1","2","a"]},{Name:"red", Pages:100, Arr:["1","2","a"]}], Count:3, IsNew:true, Price:1.234`
+	
+	aStruct := Unmarshal[Library](jsonStr)
+	
+	if *aStruct.Book.Name != "red" {
+		t.Fatalf("TestUnmarshal expected Type=%s, Got=%v", "red",
+			fmt.Sprintf("%v", aStruct))
+	}
 
-Represents the emptry string.
-```
-	if str.Empty ！= "" {
-		t.Fatal("IsEmpty failed")
+	if *aStruct.BookPtr.Pages != 100 {
+		t.Fatalf("TestUnmarshal expected Type=%s, Got=%v", "100",
+			*aStruct.BookPtr.Pages)
+	}
+
+	if (*aStruct.BookPtr.Arr)[0] != "1" {
+		t.Fatalf("TestUnmarshal expected Type=%s, Got=%v", "1",
+			(*aStruct.BookPtr.Arr)[0])
+	}
+	
+	if *((*aStruct.Ptr)[0]) != 1 {
+		t.Fatalf("TestUnmarshal expected Type=%s, Got=%v", "1",
+			fmt.Sprintf("%v", aStruct))
+	}
+	
+	jsonStr = `
+	// Comments
+	Books:{Name:"red", Pages:100}, Count:3, IsNew:true, Price:1.234`
+	aMap := Unmarshal[map[string]any](jsonStr)
+	expected := "map[Books:map[Name:red Pages:100] Count:3 IsNew:true Price:1.234]"
+	if fmt.Sprintf("%v", aMap) != expected {
+		t.Fatalf("TestUnmarshal expected Type=%s, Got=%v", expected,
+			fmt.Sprintf("%v", aMap))
+	}
+
+	jsonStr = `
+	    /* Comments */
+		Books:1, Count:2, IsNew:3`
+	bMap := Unmarshal[map[string]int](jsonStr)
+	expected = "map[Books:1 Count:2 IsNew:3]"
+	if fmt.Sprintf("%v", bMap) != expected {
+		t.Fatalf("TestUnmarshal expected Type=%s, Got=%v", expected,
+			fmt.Sprintf("%v", bMap))
 	}
 ```
-### str.IsEmpty
+### json.Marshal
 
-Identify whether the source string is empty.
+Marshal given struct/map or their pointer to json string.
+```
+	type Book struct {
+		Name  *string
+		Pages *int `json:"pages"`
+		Arr   *[]*string
+	}
+	
+	type Library struct {
+		Ptr     *[]*int
+		Book    Book // Books string
+		BookPtr *Book
+		Books   []Book
+		Count   int
+		IsNew   bool
+		Price   float32
+	}
+	
+	aInt := 1
+	aIntArr := []*int{&aInt}
+
+	bookName := "book name"
+	pages := 10
+	arr := []*string{&bookName}
+
+	var book = Book{Name: &bookName, Pages: &pages, Arr: &arr}
+	var lib = Library{Ptr: &aIntArr, Book: book, BookPtr: &book, Books: []Book{book, book}, Count: 1, IsNew: true, Price: 1.2}
+	
+	json := Marshal(lib)
+	if !strings.Contains(json, "1.2") {
+		t.Fatalf("TestUnmarshal expected Type=%v, Got=%v", "1.2", json)
+	}
+
+	libPtr := &Library{Ptr: &aIntArr, Book: book, BookPtr: &book, Books: []Book{book, book}, Count: 1, IsNew: true, Price: 1.1}
+	
+	json = Marshal(libPtr)
+	if !strings.Contains(json, "1.1") {
+		t.Fatalf("TestUnmarshal expected Type=%v, Got=%v", "1.1", json)
+	}
+	
+	aMap := map[string]any{}
+	aMap["int"] = 10
+	aMap["string"] = "this is a string"
+	aMap["bool"] = false
+	aMap["bMap"] = map[string]any{"a": 1.2}
+	
+	json = Marshal(aMap)
+	if !strings.Contains(json, "1.2") {
+		t.Fatalf("TestUnmarshal expected Type=%v, Got=%v", "1.2", json)
+	}
+```
+### Container
+
+Helpful wrapper for navigating hierarchies of map[string]any objects.
 ```
 	if IsEmpty("abc") {
 		t.Fatal("IsEmpty failed " + "abc")
