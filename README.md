@@ -164,52 +164,191 @@ Marshal given struct/map or their pointer to json string.
 
 Helpful wrapper for navigating hierarchies of map[string]any objects.
 ```
-	if IsEmpty("abc") {
-		t.Fatal("IsEmpty failed " + "abc")
+var jsonStr string = `{
+	"employees":{
+	   "protected":false,
+	   "address":{
+		  "street":"22 Saint-Lazare",
+		  "postalCode":"75003",
+		  "city":"Paris",
+		  "countryCode":"FRA",
+		  "country":"France"
+	   },
+	   "employee":[
+		  {
+			 "id":1,
+			 "first_name":"Jeanette",
+			 "last_name":"Penddreth"
+		  },
+		  {
+			 "id":2,
+			 "firstName":"Giavani",
+			 "lastName":"Frediani"
+		  }
+	   ]
+	}
+ }`
+
+var container *Container = Parse(jsonStr)
+```
+### container.Path
+
+Path searches the wrapped structure following a path in dot or forward slash notation, segments of this path are searched according to the same rules as Search.
+```
+	if container.Path("employees.protected").Data() != "false" {
+		t.Fatalf("TestParse expected Type=%s, Got=%s", "false",
+			container.Path("employees.protected").Data())
+	}
+	
+	if container.Path("employees.employee.0.id").String() != "1" {
+		t.Fatalf("TestParse expected Type=%s, Got=%s", "1",
+			container.Path("employees.employee.0.id").String())
 	}
 ```
-### str.IsNotEmpty
+### container.Search
 
-Identify whether the source string is empty.
+Search attempts to find and return an object within the wrapped structure by following a provided hierarchy of field names to locate the target.
 ```
-	if !IsNotEmpty("abc") {
-		t.Fatal("IsNotEmpty failed" + "abc")
+	if container.Search("employees", "address", "country").Data() != "France" {
+		t.Fatalf("TestParse expected Type=%s, Got=%s", "France",
+			container.Search("employees", "address", "country").Data())
 	}
 ```
-### str.Contact
+### container.Exists
 
-Contact the sources from any type.
+Exists checks whether a field exists within the hierarchy.
 ```
-	twoDiffType := Contact("abc", 1)
-	if twoDiffType != "abc1" {
-		t.Fatal("TestContact failed " + "abc, 1")
+	if !container.Exists("employees", "address", "countryCode") {
+		t.Fatalf("TestParse expected Type=%s, Got=%v", "true",
+			container.Exists("employees", "address", "countryCode"))
 	}
 ```
-### str.From
+### container.ExistPath
 
-Convert to string from any type.
+ExistPath checks whether a dot or forward slash notation path exists.
 ```
-	f := From(1.123)
-	if f != "1.123" {
-		t.Fatal("From failed " + "1.123")
+	if !container.ExistPath("/employees/address/countryCode") {
+		t.Fatalf("TestParse expected Type=%s, Got=%s", "true",
+			fmt.Sprintf("%v", container.Exists("employees", "address", "countryCode")))
 	}
 ```
-### str.Format
+### container.ChildrenMap
 
-Format source string that instead given name in curly brackets by given value.
+ChildrenMap returns a map of all the children of an object element. IF the underlying value isn't a object then an empty map is returned.
 ```
-	diffTypeValue := Format("abc {name}", "name", 1)
-	if diffTypeValue != "abc 1" {
-		t.Fatal("TestFormat failed " + "abc, 1 ")
+	expectedMap := map[string]string{"street": "22 Saint-Lazare", "postalCode": "75003",
+		"city": "Paris", "countryCode": "FRA", "country": "France"}
+	for key, child := range container.Search("employees", "address").ChildrenMap() {
+		//fmt.Printf("Key=>%v, Value=>%v\n", key, child.Data().(string))
+		if expectedMap[key] != child.Data().(string) {
+			t.Errorf("Child unexpected: %v != %v", expectedMap[key], child.Data().(string))
+		}
 	}
 ```
-### str.Formats
+### container.Children
 
-Format source string by calling Format functon. See also Format.
+Children returns a slice of all children of an array element. This also works for objects, however, the children returned for an object will be in a random order and you lose the names of the returned objects this way. If the underlying container value isn't an array or map nil is returned.
 ```
-	strFromMap := Formats("{a}{ b }c", diffTypeValue)
-	if strFromMap != "Dog1c" {
-		t.Fatal("TestFormats failed " + "Dog1c")
+	expected := []string{"map[first_name:Jeanette id:1 last_name:Penddreth]",
+		"map[firstName:Giavani id:2 lastName:Frediani]"}
+	// Iterating employee array
+	for i, child := range container.Search("employees", "employee").Children() {
+		//fmt.Println(child.Data())
+		if expected[i] != fmt.Sprintf("%v", child.Data()) {
+			t.Errorf("Child unexpected: %v != %v", expected[i], fmt.Sprintf("%v", child.Data()))
+		}
+	}
+```
+### GenerateJson
+
+```
+	jsonObj := New()
+	// or gabs.Wrap(jsonObject) to work on an existing map[string]interface{}
+
+	jsonObj.Set(10, "outter", "inner", "value")
+	jsonObj.SetPath(20, "outter.inner.value2")
+	jsonObj.Set(30, "outter", "inner2", "value3")
+
+	expected := "map[outter:map[inner:map[value:10 value2:20] inner2:map[value3:30]]]"
+	if fmt.Sprintf("%v", jsonObj.Data()) != expected {
+		t.Fatalf("TestGenerateJson expected Type=%s, Got=%v", expected,
+			fmt.Sprintf("%v", jsonObj.Data()))
+	}
+```
+### GenerateArrayJson
+
+```
+	jsonObj := New()
+
+	jsonObj.Array("foo", "array")
+	// Or .ArrayP("foo.array")
+
+	jsonObj.ArrayAppend(10, "foo", "array")
+	jsonObj.ArrayAppend(20, "foo", "array")
+	jsonObj.ArrayAppend(30, "foo", "array")
+
+	expected := "map[foo:map[array:[10 20 30]]]"
+	if fmt.Sprintf("%v", jsonObj.Data()) != expected {
+		t.Fatalf("TestGenerateArrayJson expected Type=%s, Got=%v", expected,
+			fmt.Sprintf("%v", jsonObj.Data()))
+	}
+```
+### container.Merge
+
+Merge a source object into an existing destination object. When a collision is found within the merged structures (both a source and destination object contain the same non-object keys) the result will be an array containing both values, where values that are already arrays will be expanded into the resulting array.
+```
+	jsonParsed1 := Parse(`{"outter":{"value1":"one"}}`)
+	jsonParsed2 := Parse(`{"outter":{"inner":{"value3":"three"}},"outter2":{"value2":"two"}}`)
+
+	jsonParsed1.Merge(jsonParsed2)
+	expected := "map[outter:map[inner:map[value3:three] value1:one] outter2:map[value2:two]]"
+	if fmt.Sprintf("%v", jsonParsed1.Data()) != expected {
+		t.Fatalf("TestMerge expected Type=%s, Got=%v", expected,
+			fmt.Sprintf("%v", jsonParsed1.Data()))
+	}
+```
+### container.DeletePath
+
+DeletePath deletes an element at a path using dot or forward slash notation, an error is returned if the element does not exist.
+```
+	jsonParsed := Parse(`{"outter":{"inner":{"value3":"three"}},"outter2":{"value2":"two"}}`)
+	jsonParsed.DeletePath("outter.inner.value3")
+
+	expected := "map[outter:map[inner:map[]] outter2:map[value2:two]]"
+	if fmt.Sprintf("%v", jsonParsed.Data()) != expected {
+		t.Fatalf("TestDelete expected Type=%s, Got=%v", expected,
+			fmt.Sprintf("%v", jsonParsed.Data()))
+	}
+```
+### container.ArrayRemovePath
+
+ArrayRemoveP attempts to remove an element identified by an index from a JSON array at a path using dot or forward slash notation.
+```
+	jsonParsed := Parse(`{"array":["one","two"]}`)
+	jsonParsed.ArrayRemovePath(1, "array")
+
+	expected := "map[array:[one]]"
+	if fmt.Sprintf("%v", jsonParsed.Data()) != expected {
+		t.Fatalf("TestDeleteArray expected Type=%s, Got=%v", expected,
+			fmt.Sprintf("%v", jsonParsed.Data()))
+	}
+```
+### container.ArrayConcat
+
+ArrayConcat attempts to append a value onto a JSON array at a path. If the target is not a JSON array then it will be converted into one, with its original contents set to the first element of the array.
+```
+	jsonObj := New()
+
+	jsonObj.Array("foo", "array")
+	// Or .ArrayP("foo.array")
+
+	jsonObj.ArrayConcat(10, "foo", "array")
+	jsonObj.ArrayConcat([]interface{}{20, 30}, "foo", "array")
+
+	expected := "map[foo:map[array:[10 20 30]]]"
+	if fmt.Sprintf("%v", jsonObj.Data()) != expected {
+		t.Fatalf("TestGenerateArrayJson expected Type=%s, Got=%v", expected,
+			fmt.Sprintf("%v", jsonObj.Data()))
 	}
 ```
 
